@@ -40,18 +40,25 @@ vagrant ssh -c "sed -i -e 's/\(actual\|expected\):/\1 => /' /home/vagrant/chef-b
 
 # Connect to the bootstrap machine:
 # vagrant ssh
+# cd chef-bcpc
 
 # set up passwords for 10.0.100.11. You'll need the original password, accessible from http://10.0.100.3/ - log into the web interface using admin/p@ssw0rd1.
 # ssh-keygen
 # ssh-copy-id ubuntu@10.0.100.11
-# ssh ubuntu@10.0.100.11 sudo visudo
+# ssh ubuntu@10.0.100.11
+# sudo visudo
 # (Add ubuntu ALL=NOPASSWD: ALL)
+# exit
+
+# Now use web interface https://10.0.100.3:4000/ to edit the "Test-Laptop" Environment and add the field "openstack_branch" : "updates" to json['overrides']['bcpc'].
+
+# That is, click on "Environments", then "Test-Laptop", then "Edit", Expand the 'json' tree, then 'overrides' and click on 'bcpc'. Edit the text in the text box to add the field "openstack_branch" : "updates" to the hash.
+
+# Optionally (this is not tested) edit /opt/chef/embedded/lib/ruby/gems/1.9.1/gems/mixlib-shellout-1.4.0/lib/mixlib/shellout.rb on bcpc-bootstrap, and change DEFAULT_READ_TIMEOUT to 3600. This may be copied to 10.0.100.11, or not.
+
 
 # Now:
 #sudo knife bootstrap -E Test-Laptop -r 'role[BCPC-Headnode]' 10.0.100.11 -x ubuntu --sudo
 
-# But this will have the same problem we had before.
-
-
-
+# This will fail in a few minutes. Use the web interface to make the newly created machine an admin: Clients->bcpc-vm1.local.lan, click Edit, tick 'Admin' and 'Save Client'.
 
