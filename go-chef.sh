@@ -3,6 +3,13 @@
 # Starts the Bloomberg BCPC chef script.
 
 
+# Add prerequisite software:
+#apt-get install virtualbox vagrant
+
+# Default install of virtualbox on Linux doesn't have a host-only network, so add one. You can do this using the
+# GUI interface, or using:
+# vboxmanage hostonlyif create
+
 # delete any existing machines.
 for i in bcpc-vm1 bcpc-vm2 bcpc-vm3 bcpc-bootstrap; do
 vboxmanage controlvm $i poweroff
@@ -15,23 +22,20 @@ pushd chef-bcpc
 
 # Reduce the amount of memory used by VMs, so this setup can run on my
 # laptop
-sed -i -e 's/^CLUSTER_VM_MEM=.*$/CLUSTER_VM_MEM=1024/' vbox_create.sh
+#sed -i -e 's/^CLUSTER_VM_MEM=.*$/CLUSTER_VM_MEM=1024/' vbox_create.sh
 
 vagrant init
 ./vbox_create.sh
 
-# If vagrant is installed, this will proceed to set up bcpc-bootstrap.
-# Currently it'll fail due to the Ruby version bug. Can we fix this?
-
 # We should now be able to:
-vagrant ssh -c "sed -i -e 's/\(actual\|expected\):/\1 => /' /home/vagrant/chef-bcpc/cookbooks/logrotate/libraries/matchers.rb"
+#vagrant ssh -c "sed -i -e 's/\(actual\|expected\):/\1 => /' /home/vagrant/chef-bcpc/cookbooks/logrotate/libraries/matchers.rb"
 
 # And continue? ./vbox_create would have called ./bootstrap_chef.sh and then
 # ./enroll-cobbler.sh. Which of these do we want to run?
 
 # It's bootstrap_chef.sh which would have had problems with ruby, so we restart this:
-./bootstrap_chef.sh  --vagrant-remote 10.0.100.3 Test-Laptop
-./enroll_cobbler.sh
+#./bootstrap_chef.sh  --vagrant-remote 10.0.100.3 Test-Laptop
+#./enroll_cobbler.sh
 
 # Now, boot each of the machines in sequence (all at once might overload your host)
 VBoxManage startvm bcpc-vm1
