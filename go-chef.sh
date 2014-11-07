@@ -25,6 +25,10 @@ pushd chef-bcpc
 #sed -i -e 's/^CLUSTER_VM_MEM=.*$/CLUSTER_VM_MEM=1024/' vbox_create.sh
 
 vagrant init
+
+# Enable VBox headless mode
+sed -i -e 's/vb.gui = true/vb.gui = false/' Vagrantfile
+
 ./vbox_create.sh
 
 # We should now be able to:
@@ -38,11 +42,12 @@ vagrant init
 #./enroll_cobbler.sh
 
 # Now, boot each of the machines in sequence (all at once might overload your host)
-VBoxManage startvm bcpc-vm1
+VBoxManage startvm bcpc-vm1 --type headless
 sleep 600
-VBoxManage startvm bcpc-vm2
+VBoxManage startvm bcpc-vm2 --type headless
 sleep 600
-VBoxManage startvm bcpc-vm3
+VBoxManage startvm bcpc-vm3 --type headless
+
 sleep 600
 
 # Connect to the bootstrap machine:
