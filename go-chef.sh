@@ -17,12 +17,8 @@ vboxmanage unregistervm $i --delete
 done
 
 
-git clone https://github.com/bloomberg/chef-bcpc.git
+git clone ssh://git@git.codethink.co.uk/people/jimmacarthur/bcpc
 pushd chef-bcpc
-
-# Reduce the amount of memory used by VMs, so this setup can run on my
-# laptop
-#sed -i -e 's/^CLUSTER_VM_MEM=.*$/CLUSTER_VM_MEM=1024/' vbox_create.sh
 
 vagrant init
 
@@ -30,6 +26,8 @@ vagrant init
 sed -i -e 's/vb.gui = true/vb.gui = false/' Vagrantfile
 
 ./vbox_create.sh
+
+# OK, now we modify the files present...
 
 # We should now be able to:
 #vagrant ssh -c "sed -i -e 's/\(actual\|expected\):/\1 => /' /home/vagrant/chef-bcpc/cookbooks/logrotate/libraries/matchers.rb"
@@ -42,28 +40,34 @@ sed -i -e 's/vb.gui = true/vb.gui = false/' Vagrantfile
 #./enroll_cobbler.sh
 
 # Now, boot each of the machines in sequence (all at once might overload your host)
-VBoxManage startvm bcpc-vm1 --type headless
-sleep 600
-VBoxManage startvm bcpc-vm2 --type headless
-sleep 600
-VBoxManage startvm bcpc-vm3 --type headless
+vboxmanage startvm bcpc-vm1 --type headless
+sleep 300
+vboxmanage startvm bcpc-vm2 --type headless
+sleep 300
+vboxmanage startvm bcpc-vm3 --type headless
+sleep 800
 
-sleep 600
+passwd=`vagrant ssh -c "cd chef-bcpc && knife data bag show configs Test-Laptop | grep cobbler-root-password: | sed -e 's/^.*: *//'"`
 
-# Connect to the bootstrap machine:
-# vagrant ssh
-# cd chef-bcpc
+# Make us a private key set 
+rm -f ceph-cluster-key.pub ceph-cluster-key
+ssh-keygen -f "ceph-cluster-key" -N ""
+ssh-keygen -f ~/.ssh/known_hosts -R 10.0.100.11
+ssh-keygen -f ~/.ssh/known_hosts -R 10.0.100.12
+ssh-keygen -f ~/.ssh/known_hosts -R 10.0.100.13
+# Unfortunately, this keeps prompting for ID...
+echo "Bootstrapping worker nodes using password $passwd"
+../ssh-bootstrap.py $passwd ceph-cluster-key.pub 10.0.100.11
+../ssh-bootstrap.py $passwd ceph-cluster-key.pub 10.0.100.12
+../ssh-bootstrap.py $passwd ceph-cluster-key.pub 10.0.100.13
+sshopts="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o BatchMode=Yes -i ceph-cluster-key"
+ssh $sshopts ubuntu@10.0.100.11 "echo $passwd | sudo -S bash -c \"echo \\\"ubuntu    ALL=NOPASSWD:ALL\\\" >> /etc/sudoers\""
+ssh $sshopts ubuntu@10.0.100.12 "echo $passwd | sudo -S bash -c \"echo \\\"ubuntu    ALL=NOPASSWD:ALL\\\" >> /etc/sudoers\""
+ssh $sshopts ubuntu@10.0.100.13 "echo $passwd | sudo -S bash -c \"echo \\\"ubuntu    ALL=NOPASSWD:ALL\\\" >> /etc/sudoers\""
 
-# Get the root password:
-# knife data bag show configs Test-Laptop | grep cobbler-root-password: | sed -e 's/^.*: *//'
-# ssh-keygen
-# ssh-copy-id ubuntu@10.0.100.11
-# ssh ubuntu@10.0.100.11
-# sudo visudo
-# (Add ubuntu ALL=NOPASSWD: ALL)
-# exit
-
-# so, how would we automate this? Is it something we should be able to do with chef?
+# Now we need to copy that key to the bootstrap machine...
+mv ceph-cluster-key vbox/
+vagrant ssh -c "mkdir -p ~/.ssh && mv /vagrant/ceph-cluster-key ~/.ssh/id_rsa"
 
 # libnova patches - this section should no longer be necessary with latest chef-bcpc.
 
@@ -72,7 +76,6 @@ sleep 600
 ## OR: EDITOR=nano knife environment edit Test-Laptop
 
 # Optionally (this is not tested) edit /opt/chef/embedded/lib/ruby/gems/1.9.1/gems/mixlib-shellout-1.4.0/lib/mixlib/shellout.rb on bcpc-bootstrap, and change DEFAULT_READ_TIMEOUT to 3600. This may be copied to 10.0.100.11, or not.
-
 
 # Now:
 #sudo knife bootstrap -E Test-Laptop -r 'role[BCPC-Headnode]' 10.0.100.11 -x ubuntu --sudo
