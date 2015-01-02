@@ -17,7 +17,7 @@ vboxmanage unregistervm $i --delete
 done
 
 
-git clone ssh://git@git.codethink.co.uk/people/jimmacarthur/bcpc
+git clone ssh://git@git.codethink.co.uk/people/jimmacarthur/bcpc -b jmac/bcpc-baserock
 pushd chef-bcpc
 
 vagrant init
